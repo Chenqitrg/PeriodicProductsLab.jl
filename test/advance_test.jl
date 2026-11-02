@@ -119,6 +119,7 @@ end
     after4 = MatrixPeriodicProduct([
         product[1], product[2], product[3], new4,
     ])
+    invalidate!(cache, 4)
     right_calls = zeros(Int, N)
     @test rebuild_right!(
         cache,
@@ -134,6 +135,7 @@ end
     after1 = MatrixPeriodicProduct([
         new1, product[2], product[3], new4,
     ])
+    invalidate!(cache, 1)
     left_calls = zeros(Int, N)
     @test rebuild_left!(
         cache,

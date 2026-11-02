@@ -5,7 +5,7 @@ using Test
 
 V = ℂ^2
 factors = [TensorMap([1.0 Float64(i); 0.5 2.0], V, V) for i in 1:4]
-cache = build_cache(length(factors), i -> factors[i])
+cache = build_cache(factors)
 
 # The site itself is excluded from both halves.
 left = left_cache_before(cache, 3)    # factors[1] * factors[2]

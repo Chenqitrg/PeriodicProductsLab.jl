@@ -7,12 +7,36 @@ Ordered periodic products and directional caches, with formal identities and exp
 ```julia
 using PeriodicProductsLab, TensorKit
 factors = [id(ℂ^2) for _ in 1:4]
-cache = build_cache(4, i -> factors[i])
+cache = build_cache(factors)
 complement = environment(cache, 2)
+factors[2] = 2 * factors[2]
 invalidate!(cache, 2)
-rebuild_left!(cache, i -> factors[i])
-rebuild_right!(cache, i -> factors[i])
+rebuild!(cache, factors)
 ```
+
+`build_cache(factors)` accepts an ordinary one-based vector. Use
+`build_cache(N, i -> ...)` to generate factors on demand, or `build_cache(product)`
+for a custom `AbstractPeriodicProduct` implementing `length` and integer indexing.
+All three construct the same prefix/suffix cache and copy endpoint factors so
+cache updates do not mutate the inputs. Factor changes still require explicit
+notification with `invalidate!` or `advance!`.
+
+Rebuilds accept the same input forms:
+
+| Input | Build | Repair both directions |
+| --- | --- | --- |
+| Vector | `build_cache(factors)` | `rebuild!(cache, factors)` |
+| Custom product | `build_cache(product)` | `rebuild!(cache, product)` |
+| Callback | `build_cache(N, i -> ...)` | `rebuild!(cache, i -> ...)` |
+
+Use `rebuild_left!` or `rebuild_right!` with any of these inputs to repair only
+one direction. A rebuild already knows the period length from the cache.
+
+Directional rebuilds reuse valid cached products and repair only the invalid
+portion. Calling them again on a valid cache performs no multiplications; the
+callback overload makes no factor requests either. Always report changed factors
+first; rebuilding does not detect unreported changes. Completed steps remain
+valid if a later step fails.
 
 ## Review order
 

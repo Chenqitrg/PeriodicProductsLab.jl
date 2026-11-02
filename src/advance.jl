@@ -3,7 +3,7 @@
 
 Record that element `site` changed without performing a product operation. Every
 dependent prefix and suffix becomes unreadable until a legal `advance!` refresh
-or an explicit complete-product `rebuild!` makes it valid again.
+or an explicit `rebuild!` repairs the invalid products.
 """
 function invalidate!(v::PeriodicCache, site::Int)
     checkbounds(v.left, site)
@@ -14,13 +14,23 @@ function invalidate!(v::PeriodicCache, site::Int)
 end
 
 """
+    rebuild_left!(v::PeriodicCache, factors::AbstractVector)
     rebuild_left!(v::PeriodicCache{T}, product::AbstractPeriodicProduct{T})
     rebuild_left!(v::PeriodicCache{T}, product_element_at)
 
-Explicitly rebuild every non-full prefix from a complete current product.
-The callable overload generates each required product element exactly once and
-does not materialize an `AbstractPeriodicProduct`.
+Repair only invalid prefixes, continuing from the last valid prefix. Each
+successful step advances the validity frontier, so a failed rebuild can resume
+without repeating completed work. A fully valid cache performs no product work.
+
+Notify the cache of every changed factor with `invalidate!` or `advance!` before
+rebuilding. The callable overload generates each needed factor exactly once;
+unchanged factors already incorporated in a valid prefix are not requested.
 """
+function rebuild_left!(v::PeriodicCache, factors::AbstractVector)
+    _validate_product(v, factors)
+    return rebuild_left!(v, site -> factors[site])
+end
+
 function rebuild_left!(
         v::PeriodicCache{T},
         product::AbstractPeriodicProduct{T},
@@ -34,8 +44,7 @@ function rebuild_left!(
         product_element_at,
     ) where {T}
     N = length(v)
-    v.left_valid_through = 0
-    for site in 1:N-1
+    for site in (v.left_valid_through + 1):(N - 1)
         slot = site + 1
         prefix = left_cache_before(v, site)
         v.left[slot] = _append_product!(
@@ -47,13 +56,23 @@ function rebuild_left!(
 end
 
 """
+    rebuild_right!(v::PeriodicCache, factors::AbstractVector)
     rebuild_right!(v::PeriodicCache{T}, product::AbstractPeriodicProduct{T})
     rebuild_right!(v::PeriodicCache{T}, product_element_at)
 
-Explicitly rebuild every non-full suffix from a complete current product.
-The callable overload generates each required product element exactly once and
-does not materialize an `AbstractPeriodicProduct`.
+Repair only invalid suffixes, continuing from the first valid suffix. Each
+successful step advances the validity frontier, so a failed rebuild can resume
+without repeating completed work. A fully valid cache performs no product work.
+
+Notify the cache of every changed factor with `invalidate!` or `advance!` before
+rebuilding. The callable overload generates each needed factor exactly once;
+unchanged factors already incorporated in a valid suffix are not requested.
 """
+function rebuild_right!(v::PeriodicCache, factors::AbstractVector)
+    _validate_product(v, factors)
+    return rebuild_right!(v, site -> factors[site])
+end
+
 function rebuild_right!(
         v::PeriodicCache{T},
         product::AbstractPeriodicProduct{T},
@@ -66,9 +85,7 @@ function rebuild_right!(
         v::PeriodicCache{T},
         product_element_at,
     ) where {T}
-    N = length(v)
-    v.right_valid_from = N
-    for site in N:-1:2
+    for site in v.right_valid_from:-1:2
         slot = site - 1
         suffix = right_cache_after(v, site)
         v.right[slot] = _prepend_product!(
@@ -77,6 +94,19 @@ function rebuild_right!(
         v.right_valid_from = slot
     end
     return v
+end
+
+function _validate_product(v::PeriodicCache, factors::AbstractVector)
+    Base.require_one_based_indexing(factors)
+    length(factors) == length(v) || throw(DimensionMismatch(
+        "cache has $(length(v)) sites but factor vector has $(length(factors))"
+    ))
+    cache_space = edge_space(v)
+    codomain(first(factors)) == cache_space &&
+        domain(last(factors)) == cache_space || throw(SpaceMismatch(
+        "factor edge spaces must match cache edge space $cache_space"
+    ))
+    return factors
 end
 
 function _validate_product(
@@ -166,17 +196,34 @@ function advance!(
 end
 
 """
+    rebuild!(v::PeriodicCache, factors::AbstractVector)
     rebuild!(v::PeriodicCache{T}, product::AbstractPeriodicProduct{T})
+    rebuild!(v::PeriodicCache, product_element_at)
 
-Explicitly rebuild both cache directions from a complete current product.
-Unlike a query, this operation is allowed to perform the required contractions.
+Repair invalid products in both cache directions using the current product,
+preserving valid prefixes and suffixes. Changes must first be reported with
+`invalidate!` or `advance!`. Unlike a query, this operation performs the required
+contractions; when both directions are valid it performs none.
+
+Pass a one-based factor vector, a custom periodic product, or a callable
+`product_element_at(site)` returning the current factor. Vectors and products
+must have the same length and periodic edge space as the cache.
 """
+function rebuild!(v::PeriodicCache, factors::AbstractVector)
+    _validate_product(v, factors)
+    return rebuild!(v, site -> factors[site])
+end
+
 function rebuild!(
         v::PeriodicCache{T},
         product::AbstractPeriodicProduct{T},
     ) where {T}
     _validate_product(v, product)
-    rebuild_left!(v, product)
-    rebuild_right!(v, product)
+    return rebuild!(v, site -> product[site])
+end
+
+function rebuild!(v::PeriodicCache, product_element_at)
+    rebuild_left!(v, product_element_at)
+    rebuild_right!(v, product_element_at)
     return v
 end

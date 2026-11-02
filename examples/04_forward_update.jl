@@ -5,7 +5,7 @@ using Test
 
 V = ℂ^2
 factors = [TensorMap([1.0 Float64(i); 0.5 2.0], V, V) for i in 1:4]
-cache = build_cache(length(factors), i -> factors[i])
+cache = build_cache(factors)
 
 @testset "Forward updates: 1 -> 2 -> 3 -> 4 -> 1" begin
     for site in 1:3
@@ -24,7 +24,7 @@ cache = build_cache(length(factors), i -> factors[i])
     factors[4] = 2 * factors[4]
     invalidate!(cache, 4)
     @test_throws StaleCacheError environment(cache, 1)
-    rebuild_right!(cache, i -> factors[i])
+    rebuild_right!(cache, factors)
     @test environment(cache, 1) ≈ factors[2] * factors[3] * factors[4]
 end
 

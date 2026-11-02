@@ -11,8 +11,8 @@ C = TensorMap([1.0 0.0; 1.0 1.0], V, V)
 D = TensorMap([1.0 2.0; 0.0 1.0], V, V)
 factors = [A, B, C, D]
 
-# i -> factors[i] means: given a site i, return its factor.
-cache = build_cache(length(factors), i -> factors[i])
+# Cache the ordered products before and after each site.
+cache = build_cache(factors)
 
 # Remove B and start immediately AFTER its site: C * D * A.
 # Multiplication order matters: A * C * D is generally different.
