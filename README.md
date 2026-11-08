@@ -51,7 +51,7 @@ All source files are in `src/`; focused regression tests live in `test/`.
 
 ## Dependencies and local tests
 
-Only TensorKit and LinearAlgebra are runtime dependencies. Factors implement the domain/codomain and multiplication protocol; no MPS or algorithm configuration is required. SweepDirection and SweepState describe cache movement; complete sweep algorithms belong to MPSSplitLab.
+Only TensorKit and LinearAlgebra are runtime dependencies. Factors implement the domain/codomain and multiplication protocol; no MPS or algorithm configuration is required. SweepDirection and SweepState describe cache movement; complete sweep algorithms belong to PMPSLab.
 
 From this repository:
 
@@ -62,8 +62,8 @@ julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.test()'
 ## Origin
 
 Extracted from PMPSLab without changing numerical equations or configuration semantics.
-Import each responsibility from its owning package; MPSSplitLab provides splitting algorithms. Version: `0.1.0`.
+Import each responsibility from its owning package; PMPSLab provides splitting algorithms. Version: `0.1.0`.
 
 This research code builds on TensorKit.jl and MPSKit.jl; the numerical work also
 draws on TNRKit.jl where applicable. Credit remains with those projects and their
-authors and contributors. See the sibling MPSSplitLab README for the original attribution.
+authors and contributors. See the sibling PMPSLab README for the original attribution.
